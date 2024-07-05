@@ -10,7 +10,7 @@ BASE_PATH = "/path/to/your/data/"
 VIRUS_SHARE_PATH = "/path/to/VirusShareHashes"
 FIFO_PATH = "/tmp/virusshare_fifo"
 
-# Find the latest report folder (QRadar's particularities)
+# Find the latest report folder (QRadar-specific)
 def find_latest_report_folder(base_path):
     try:
         folders = glob.glob(os.path.join(base_path, '*'))
