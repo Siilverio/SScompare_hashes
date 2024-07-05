@@ -1,0 +1,14 @@
+# Configuração personalizada para o FIFO e o destino remoto
+
+source s_fifo {
+    file("/tmp/virusshare_fifo" program-override("virusshare") flags(no-parse));
+};
+
+destination d_remote {
+    udp("IP de Destino" port(517));
+};
+
+log {
+    source(s_fifo);
+    destination(d_remote);
+};
