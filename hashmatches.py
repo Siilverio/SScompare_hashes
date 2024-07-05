@@ -4,12 +4,10 @@ import glob
 import time
 import logging
 
-# Configuração do logger
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configurações
-BASE_PATH = "/store/reporting/reports/antonio.silverio/reports"
-VIRUS_SHARE_PATH = "/store/VirusShareHashes"
+BASE_PATH = "/path/to/your/data/"
+VIRUS_SHARE_PATH = "/path/to/VirusShareHashes"
 FIFO_PATH = "/tmp/virusshare_fifo"
 
 def find_latest_report_folder(base_path):
@@ -32,7 +30,7 @@ def read_csv_file(csv_folder):
         df = pd.read_csv(csv_file)
         logging.debug("Available columns in CSV: %s", df.columns)
 
-        required_columns = ['MD5 Hash', 'Log Source', 'Horario']
+        required_columns = ['MD5 Hash', 'Log Source', 'Hour']
         for column in required_columns:
             if column not in df.columns:
                 raise KeyError(f"Column '{column}' not found in CSV file")
@@ -50,7 +48,7 @@ def get_all_hashes(virus_share_path):
         
         for md5_file in md5_files:
             with open(md5_file, 'r') as f:
-                lines = f.readlines()[6:]  # Ignora as 6 primeiras linhas (assinatura do VirusShare)
+                lines = f.readlines()[6:]  # Ignore the first 6 line (VirusShare signature)
                 all_hashes.update(line.strip().lower() for line in lines)
         return all_hashes
     except Exception as e:
@@ -66,27 +64,24 @@ def compare_hashes(df, all_hashes, fifo_path):
             for _, row in df.iterrows():
                 hash_value = row['MD5 Hash']
                 log_source = row['Log Source']
-                horario = row['Horario']
+                hour = row['Hour']
                 processed_hashes += 1
                 if hash_value.lower() in all_hashes:
                     found_hashes += 1
-                    message = f"Hash Maliciosa Encontrada\tHash={hash_value}\tLog Source={log_source}\tHorario={horario}\n"
+                    message = f"Malicious hash found\tHash={hash_value}\tLog Source={log_source}\tHour={hour}\n"
                     fifo.write(message)
-                    logging.debug(f"Hash maliciosa encontrada: {hash_value} (Log Source: {log_source}, Horario: {horario})")
+                    logging.debug(f"Malicious hash found: {hash_value} (Log Source: {log_source}, Hour: {hour})")
                 
-                # Exibir progresso a cada 1000 hashes processados
                 if processed_hashes % 1000 == 0:
                     progress_percent = processed_hashes / total_hashes * 100
-                    logging.info(f"Progresso: {processed_hashes}/{total_hashes} hashes processados ({progress_percent:.2f}%)")
+                    logging.info(f"Progresso: {processed_hashes}/{total_hashes} processed hashes ({progress_percent:.2f}%)")
 
-        # Exibir estatísticas finais
-        logging.info(f"Total de hashes processados: {processed_hashes}/{total_hashes}")
-        logging.info(f"Total de hashes maliciosos encontrados: {found_hashes}")
+        logging.info(f"Processed Hashes: {processed_hashes}/{total_hashes}")
+        logging.info(f"Malicious hashes found: {found_hashes}")
     except Exception as e:
         raise RuntimeError(f"Error comparing hashes: {e}")
 
-def main():
-    # Verifica se o FIFO já existe e cria se não existir
+def main(): 
     if not os.path.exists(FIFO_PATH):
         os.mkfifo(FIFO_PATH)
 
@@ -94,18 +89,18 @@ def main():
     
     try:
         latest_report_folder = find_latest_report_folder(BASE_PATH)
-        logging.info(f"Pasta mais recente encontrada: {latest_report_folder}")
+        logging.info(f"Latest folder: {latest_report_folder}")
         csv_folder = os.path.join(latest_report_folder, "CSV")
         df = read_csv_file(csv_folder)
         all_hashes = get_all_hashes(VIRUS_SHARE_PATH)
-        logging.info(f"Total de hashes MD5 encontrados: {len(all_hashes)}")
+        logging.info(f"MD5 Hashes found: {len(all_hashes)}")
         compare_hashes(df, all_hashes, FIFO_PATH)
 
         fifo_size = os.path.getsize(FIFO_PATH)
         if fifo_size == 0:
-            logging.info("Nenhum hash malicioso encontrado.")
+            logging.info("None Malicious Hash found")
         else:
-            logging.info("Foram encontrados hashes maliciosos. Verifique o FIFO para os registros.")
+            logging.info("There been malicious hashes found.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
